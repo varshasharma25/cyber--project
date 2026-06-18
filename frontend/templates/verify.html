@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Verify — Bob{% endblock %}
+{% block scripts %}
+<script>
+  const verifyForm = document.getElementById('verifyForm');
+
+  if (verifyForm) {
+    verifyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const method = verifyForm.dataset.method;
+      const url = verifyForm.action;
+      const token = localStorage.getItem('bob_jwt');
+
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const submitBtn = verifyForm.querySelector('button[type="submit"]');
+      const originalHtml = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Verifying…';
+
+      const body = {};
+      if (method === 'sms' || method === '2fa') {
+        body.code = document.getElementById('code').value.trim();
+      } else if (method === 'biometric') {
+        body.biometric = true; // stub payload — your backend accepts any non-empty body
+      }
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showVerifyError(data.error || 'Verification failed.');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalHtml;
+          return;
+        }
+
+        // Upgrade the stored token to the new verified one
+        if (data.token) {
+          localStorage.setItem('bob_jwt', data.token);
+        }
+
+        window.location.href = '/home';
+
+      } catch (err) {
+        showVerifyError('Could not reach the server. Try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHtml;
+      }
+    });
+  }
+
+  function showVerifyError(message) {
+    let el = document.getElementById('verifyError');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'verifyError';
+      el.className = 'alert alert-error fade-in';
+      verifyForm.parentNode.insertBefore(el, verifyForm);
+    }
+    el.textContent = message;
+  }
+</script>
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card glass">
+        <div class="auth-header">
+            <div class="auth-icon auth-icon--warn">
+                <span class="material-icons-round">gpp_maybe</span>
+            </div>
+            <h2>Step-Up Verification</h2>
+            <p>
+                {% if method == 'sms' %}
+                    Enter the code sent to your registered phone number.
+                {% elif method == 'biometric' %}
+                    Complete biometric verification to continue.
+                {% elif method == '2fa' %}
+                    Enter your two-factor authentication code.
+                {% else %}
+                    Additional verification is required to continue.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="verify-tabs">
+            <a href="{{ url_for('verify', method='sms') }}"
+               class="verify-tab {% if method == 'sms' %}active{% endif %}">
+                <span class="material-icons-round">sms</span> SMS
+            </a>
+            <a href="{{ url_for('verify', method='2fa') }}"
+               class="verify-tab {% if method == '2fa' %}active{% endif %}">
+                <span class="material-icons-round">phonelink_lock</span> 2FA
+            </a>
+            <a href="{{ url_for('verify', method='biometric') }}"
+               class="verify-tab {% if method == 'biometric' %}active{% endif %}">
+                <span class="material-icons-round">fingerprint</span> Biometric
+            </a>
+        </div>
+
+        <form class="auth-form" id="verifyForm" data-method="{{ method }}"
+            action="{% if method == 'sms' %}{{ url_for('verify_bp.verify_sms') }}{% elif method == '2fa' %}{{ url_for('verify_bp.verify_2fa') }}{% elif method == 'biometric' %}{{ url_for('verify_bp.verify_biometric') }}{% else %}{{ url_for('verify_bp.verify_sms') }}{% endif %}"
+            method="POST">
+            {% if method in ['sms', '2fa'] %}
+            <div class="form-group">
+                <label for="code">
+                    {% if method == 'sms' %}SMS Code{% else %}Authenticator Code{% endif %}
+                </label>
+                <div class="input-wrap">
+                    <span class="material-icons-round">pin</span>
+                    <input type="text" id="code" name="code"
+                           placeholder="000000" maxlength="6"
+                           pattern="[0-9]{6}" inputmode="numeric"
+                           autocomplete="one-time-code" required autofocus>
+                </div>
+                <span class="field-hint">Enter the 6-digit code</span>
+            </div>
+            {% elif method == 'biometric' %}
+            <div class="biometric-block">
+                <div class="biometric-icon" id="biometricIcon">
+                    <span class="material-icons-round">fingerprint</span>
+                </div>
+                <p style="font-size:13px; text-align:center; color:var(--txt-2)">
+                    Tap the button below to initiate biometric scan
+                </p>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary w-full mt-2">
+                <span class="material-icons-round" style="font-size:17px">verified_user</span>
+                Verify
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <a href="{{ url_for('logout') }}" style="color:var(--txt-3); font-size:12px">
+                Cancel and sign out
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

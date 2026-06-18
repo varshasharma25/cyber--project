@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}Logs — Bob{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Logs</h1>
+        <p>Live event stream from Bob Identity Trust</p>
+    </div>
+    <span class="badge" id="countPill">
+        {{ logs | length }} {{ 'entry' if logs | length == 1 else 'entries' }}
+    </span>
+</div>
+
+<div class="logs-toolbar">
+    <div class="filter-group">
+        <button class="filter-btn active" data-level="ALL">All</button>
+        <button class="filter-btn" data-level="SUCCESS">Success</button>
+        <button class="filter-btn" data-level="ERROR">Error</button>
+        <button class="filter-btn" data-level="WARN">Warn</button>
+    </div>
+    <div class="input-wrap" style="max-width:260px; flex:1;">
+        <span class="material-icons-round">search</span>
+        <input type="text" id="logSearch" placeholder="Search logs…" autocomplete="off">
+    </div>
+</div>
+
+<div class="copy-toast" id="copyToast">Copied!</div>
+
+<div class="log-box glass">
+    <div class="log-header">
+        <span>Time</span>
+        <span>Level</span>
+        <span>Details</span>
+    </div>
+
+    {% if logs %}
+        {% set ns = namespace(last_date='') %}
+        {% for entry in logs | reverse %}
+            {% set entry_date = entry.timestamp[:10] %}
+            {% if entry_date != ns.last_date %}
+                {% set ns.last_date = entry_date %}
+                <div class="log-date-divider"><span>{{ entry_date }}</span></div>
+            {% endif %}
+
+            <div class="log-entry" data-level="{{ entry.level }}">
+
+                <span class="log-ts copyable" data-ts="{{ entry.timestamp }}" title="Click to copy timestamp">
+                    {{ entry.timestamp[11:] }}
+                </span>
+
+                <span>
+                    <span class="lvl lvl-{{ entry.level }}">{{ entry.level }}</span>
+                </span>
+
+                {% if entry.level == 'ERROR' and entry.parts %}
+                    <span class="log-msg cmd-row">
+                        <span class="cmd-chip copyable" data-copy="{{ entry.parts.user_id }}" title="Copy user ID">
+                            <span class="material-icons-round" style="font-size:12px">person</span>
+                            {{ entry.parts.username }}
+                        </span>
+                        <span class="cmd-sep">/</span>
+                        <span class="cmd-chip">
+                            <span class="material-icons-round" style="font-size:12px">terminal</span>
+                            {{ entry.parts.command }}
+                        </span>
+                        <span class="cmd-sep">›</span>
+                        <span class="cmd-chip eval-error" title="{{ entry.parts.message }}">
+                            <span class="material-icons-round" style="font-size:12px">warning</span>
+                            {{ entry.parts.message | truncate(60, true, '…') }}
+                        </span>
+                    </span>
+
+                {% elif entry.level == 'WARN' and entry.parts %}
+                    <span class="log-msg cmd-row">
+                        <span class="cmd-chip cmd-warn">
+                            <span class="material-icons-round" style="font-size:12px">warning_amber</span>
+                            {{ entry.message | truncate(80, true, '…') }}
+                        </span>
+                    </span>
+
+                {% else %}
+                    <span class="log-msg">{{ entry.message }}</span>
+                {% endif %}
+
+            </div>
+        {% endfor %}
+
+    {% else %}
+        <div class="empty">
+            <span class="material-icons-round" style="font-size:28px;display:block;margin-bottom:10px;opacity:0.4;">
+                speaker_notes_off
+            </span>
+            No logs yet. Events will appear here once Bob starts receiving requests.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    /* ── Toolbar ─────────────────────────────────────────────── */
+    .logs-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+    .filter-group {
+        display: flex;
+        gap: 6px;
+        background: rgba(4,12,34,0.5);
+        border: 0.5px solid var(--border);
+        border-radius: 10px;
+        padding: 4px;
+    }
+    .filter-btn {
+        padding: 5px 14px;
+        border-radius: 7px;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--txt-3);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.15s;
+    }
+    .filter-btn:hover { color: var(--txt-2); background: rgba(40,100,220,0.1); }
+    .filter-btn.active {
+        background: rgba(40,100,220,0.22);
+        border: 0.5px solid rgba(80,160,255,0.25);
+        color: #7eb8ff;
+    }
+
+    /* ── Log box ─────────────────────────────────────────────── */
+    .log-box {
+        overflow: hidden;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 12.5px;
+    }
+    .log-header {
+        display: grid;
+        grid-template-columns: 80px 72px 1fr;
+        gap: 12px;
+        padding: 10px 20px;
+        border-bottom: 0.5px solid var(--border);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--txt-3);
+        font-family: 'Inter', sans-serif;
+    }
+    .log-date-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 20px;
+        font-size: 10.5px;
+        color: var(--txt-3);
+        background: rgba(4,12,34,0.4);
+        border-top: 0.5px solid var(--border);
+        border-bottom: 0.5px solid var(--border);
+        font-family: 'Inter', sans-serif;
+    }
+    .log-date-divider.hidden { display: none; }
+    .log-entry {
+        display: grid;
+        grid-template-columns: 80px 72px 1fr;
+        gap: 12px;
+        padding: 9px 20px;
+        align-items: center;
+        border-bottom: 0.5px solid rgba(80,160,255,0.04);
+        transition: background 0.12s;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-entry:hover { background: rgba(30,70,180,0.08); }
+    .log-entry.hidden { display: none; }
+
+    /* ── Timestamp ───────────────────────────────────────────── */
+    .log-ts {
+        color: var(--txt-3);
+        font-size: 11.5px;
+        cursor: pointer;
+        transition: color 0.15s;
+        white-space: nowrap;
+    }
+    .log-ts:hover { color: var(--accent); }
+
+    /* ── Message ─────────────────────────────────────────────── */
+    .log-msg { color: var(--txt-2); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cmd-row { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
+
+    /* ── Chips ───────────────────────────────────────────────── */
+    .cmd-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 5px;
+        font-size: 11.5px;
+        background: rgba(40,100,220,0.1);
+        border: 0.5px solid rgba(80,160,255,0.16);
+        color: var(--txt-2);
+        white-space: nowrap;
+        cursor: default;
+    }
+    .cmd-chip.copyable { cursor: pointer; transition: background 0.13s, color 0.13s; }
+    .cmd-chip.copyable:hover { background: rgba(40,100,220,0.22); color: #7eb8ff; }
+    .cmd-sep { color: var(--txt-3); font-size: 11px; }
+    .eval-error {
+        background: rgba(244,63,94,0.1) !important;
+        border-color: rgba(244,63,94,0.22) !important;
+        color: var(--red) !important;
+    }
+    .cmd-warn {
+        background: rgba(249,115,22,0.1);
+        border-color: rgba(249,115,22,0.2);
+        color: var(--orange);
+    }
+</style>
+
+<script>
+    const entries  = document.querySelectorAll('.log-entry');
+    const countEl  = document.getElementById('countPill');
+    const searchEl = document.getElementById('logSearch');
+    const toast    = document.getElementById('copyToast');
+
+    let activeLevel = 'ALL';
+    let toastTimer;
+
+    function showToast(label) {
+        toast.textContent = 'Copied: ' + label;
+        toast.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('visible'), 1800);
+    }
+
+    document.querySelectorAll('.copyable').forEach(el => {
+        el.addEventListener('click', () => {
+            const tsRaw = el.dataset.ts;
+            if (tsRaw) {
+                const unix = Math.floor(new Date(tsRaw.replace(' ', 'T')).getTime() / 1000);
+                navigator.clipboard.writeText(String(unix)).then(() => showToast(unix));
+            } else {
+                const val = el.dataset.copy || '';
+                navigator.clipboard.writeText(val).then(() => showToast(val.length > 20 ? 'value' : val));
+            }
+        });
+    });
+
+    function updateDividers() {
+        document.querySelectorAll('.log-date-divider').forEach(div => {
+            let el = div.nextElementSibling;
+            let hasVisible = false;
+            while (el && !el.classList.contains('log-date-divider')) {
+                if (el.classList.contains('log-entry') && !el.classList.contains('hidden')) {
+                    hasVisible = true; break;
+                }
+                el = el.nextElementSibling;
+            }
+            div.classList.toggle('hidden', !hasVisible);
+        });
+    }
+
+    function updateCount() {
+        const n = [...entries].filter(e => !e.classList.contains('hidden')).length;
+        countEl.textContent = n + (n === 1 ? ' entry' : ' entries');
+    }
+
+    function applyFilters() {
+        const q = searchEl.value.trim().toLowerCase();
+        entries.forEach(el => {
+            const lvl   = el.dataset.level;
+            const text  = el.textContent.toLowerCase();
+            const lvlOk = activeLevel === 'ALL' || lvl === activeLevel;
+            const srchOk = !q || text.includes(q);
+            el.classList.toggle('hidden', !(lvlOk && srchOk));
+        });
+        updateDividers();
+        updateCount();
+    }
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeLevel = btn.dataset.level;
+            applyFilters();
+        });
+    });
+
+    searchEl.addEventListener('input', applyFilters);
+</script>
+{% endblock %}

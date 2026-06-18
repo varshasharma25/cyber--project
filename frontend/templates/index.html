@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Identity risk overview for {{ session.get('username', 'User') }}</p>
+    </div>
+    <span class="badge">
+        <span class="badge-dot"></span>
+        Session Active
+    </span>
+</div>
+
+<div class="stat-grid mb-3">
+    <div class="stat-card glass">
+        <div class="stat-card-icon amber">
+            <span class="material-icons-round">shield</span>
+        </div>
+        <div>
+            <div class="stat-card-val" id="riskScore">—</div>
+            <div class="stat-card-key">Risk Score</div>
+        </div>
+    </div>
+    <div class="stat-card glass">
+        <div class="stat-card-icon green">
+            <span class="material-icons-round">verified</span>
+        </div>
+        <div>
+            <div class="stat-card-val" id="trustLevel">—</div>
+            <div class="stat-card-key">Trust Level</div>
+        </div>
+    </div>
+    <div class="stat-card glass">
+        <div class="stat-card-icon blue">
+            <span class="material-icons-round">history</span>
+        </div>
+        <div>
+            <div class="stat-card-val" id="sessionCount">—</div>
+            <div class="stat-card-key">Sessions</div>
+        </div>
+    </div>
+    <div class="stat-card glass">
+        <div class="stat-card-icon purple">
+            <span class="material-icons-round">fingerprint</span>
+        </div>
+        <div>
+            <div class="stat-card-val" id="verifyStatus">—</div>
+            <div class="stat-card-key">Verified</div>
+        </div>
+    </div>
+</div>
+
+<div class="dash-grid">
+
+    <div class="dash-card glass">
+        <div class="dash-card-head">
+            <span>Identity</span>
+            <span class="dash-card-badge badge-success">Authenticated</span>
+        </div>
+        <div class="identity-block">
+            <div class="identity-avatar-wrap">
+                <div class="identity-avatar identity-avatar-fallback">
+                    <span class="material-icons-round">person</span>
+                </div>
+                <span class="identity-status-dot online"></span>
+            </div>
+            <div>
+                <div class="identity-name">{{ session.get('username', 'User') }}</div>
+                <div class="identity-tag">Authenticated User</div>
+                <div class="identity-id">
+                    <span class="material-icons-round" style="font-size:13px">tag</span>
+                    {{ session.get('user_id', '—') }}
+                </div>
+            </div>
+        </div>
+        <div class="meta-list">
+            <div class="meta-row">
+                <span class="meta-key"><span class="material-icons-round">schedule</span> Login time</span>
+                <span class="meta-val" id="loginTime">—</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-key"><span class="material-icons-round">devices</span> Device</span>
+                <span class="meta-val" id="deviceInfo">—</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-key"><span class="material-icons-round">location_on</span> IP</span>
+                <span class="meta-val" id="ipInfo">—</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-key"><span class="material-icons-round">policy</span> Risk Level</span>
+                <span class="meta-val">
+                    <span class="lvl lvl-INFO" id="riskLevelBadge">UNKNOWN</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {% if is_admin %}
+
+    <div class="dash-card glass">
+
+        <div class="dash-card-head">
+            <span>Recent Activity</span>
+            <a href="/logs" class="dash-card-link">
+                View all
+                <span class="material-icons-round" style="font-size:13px">arrow_forward</span>
+            </a>
+        </div>
+        <div class="mini-log" id="activityFeed">
+            <div class="empty-inline">No activity yet</div>
+        </div>
+            
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    const ts = {{ session.get('login_ts', 0) }};
+    if (ts) {
+        document.getElementById('loginTime').textContent = 
+            new Date(ts * 1000).toLocaleTimeString();
+    }
+
+    // Device info
+    const ua = navigator.userAgent;
+    const device = /mobile/i.test(ua) ? 'Mobile' : 'Desktop';
+    document.getElementById('deviceInfo').textContent = device;
+</script>
+{% endblock %}

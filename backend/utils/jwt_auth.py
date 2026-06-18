@@ -1,1 +1,0 @@
-# Handles JWT token generation and verification. Used by routes to protect endpoints and identify the logged-in user.

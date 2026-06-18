@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bob Identity Trust{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+{% if session.get('user_id') %}
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="user-chip" onclick="toggleUserPopup()">
+            <div class="user-pfp user-pfp--placeholder">
+                <span class="material-icons-round" style="font-size:16px">person</span>
+            </div>
+            <span class="user-display-name">{{ session.get('username', 'User') }}</span>
+            <span class="material-icons-round" style="font-size:15px; color:var(--txt-3); margin-left:auto">expand_more</span>
+        </div>
+        <div class="user-popup" id="userPopup">
+            <div class="user-popup-header">
+                <div class="user-popup-avatar user-popup-avatar--placeholder">
+                    <span class="material-icons-round">person</span>
+                </div>
+                <div class="user-popup-info">
+                    <span class="user-popup-name">{{ session.get('username', 'User') }}</span>
+                    <span class="user-popup-id">ID: {{ session.get('user_id', '—') }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="user-popup-logout">
+                <span class="material-icons-round" style="font-size:16px">logout</span>
+                Sign out
+            </a>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <span class="material-icons-round">dashboard</span>
+            Dashboard
+        </a>
+        <a href="{{ url_for('verify') }}" class="nav-item {% if request.endpoint == 'verify' %}active{% endif %}">
+            <span class="material-icons-round">verified_user</span>
+            Verify
+        </a>
+        
+        {% if is_admin %}
+        <a href="{{ url_for('logs_page') }}" class="nav-item {% if request.endpoint == 'logs_page' %}active{% endif %}">
+            <span class="material-icons-round">feed</span>
+            Logs
+        </a>
+        {% endif %}
+
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="bot-tag">
+            <div class="brand-icon sm">
+                <span class="material-icons-round" style="font-size:15px">security</span>
+            </div>
+            <div class="bot-info">
+                <span class="bot-name">Bob Identity Trust</span>
+                <span class="bot-disc">RISK ENGINE v1.0</span>
+            </div>
+            <span class="brand-status online"></span>
+        </div>
+    </div>
+</aside>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<header class="topbar">
+    <button class="topbar-toggle" onclick="toggleSidebar()">
+        <span class="material-icons-round">menu</span>
+    </button>
+    <div class="topbar-brand">
+        <span class="material-icons-round" style="color:var(--accent);font-size:19px">security</span>
+        Bob
+    </div>
+    <div class="topbar-right">
+        <span class="status-pill online">
+            <span class="status-dot"></span>
+            Active
+        </span>
+    </div>
+</header>
+{% endif %}
+
+<main class="main {% if not session.get('user_id') %}main--auth{% endif %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} fade-in">
+                    <span class="material-icons-round" style="font-size:18px">
+                        {% if category == 'error' %}error{% elif category == 'success' %}check_circle{% elif category == 'warn' %}warning{% else %}info{% endif %}
+                    </span>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<div class="copy-toast" id="copyToast"></div>
+
+<script>
+function toggleSidebar() {
+    const s = document.getElementById('sidebar');
+    const o = document.getElementById('sidebarOverlay');
+    s.classList.toggle('open');
+    o.classList.toggle('visible');
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('visible');
+}
+function toggleUserPopup() {
+    document.getElementById('userPopup').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+    const popup = document.getElementById('userPopup');
+    if (popup && !e.target.closest('.user-chip') && !e.target.closest('.user-popup')) {
+        popup.classList.remove('open');
+    }
+});
+function showToast(msg) {
+    const t = document.getElementById('copyToast');
+    t.textContent = msg;
+    t.classList.add('visible');
+    setTimeout(() => t.classList.remove('visible'), 1800);
+}
+</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
