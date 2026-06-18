@@ -1,0 +1,2 @@
+# POST /risk/calculate: receives the behavior payload, calls behavior_analyzer.py to extract features, passes them to risk_model.py,
+# saves the score to risk_scores, and returns { score, level, required_verification }.

@@ -1,0 +1,1 @@
+# Handles OAuth 2.0 setup and helper functions for third-party login flow.

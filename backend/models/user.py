@@ -1,0 +1,1 @@
+# Represents the users table. Handles storing credentials and verifying login.

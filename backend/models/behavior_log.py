@@ -1,0 +1,1 @@
+# Represents the behavior_logs table. Stores raw behavioral events (typing, clicks) sent from the frontend.

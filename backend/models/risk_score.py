@@ -1,0 +1,1 @@
+# Represents the risk_scores table. Saves the ML-generated score and maps it to a risk level (low/medium/high).
