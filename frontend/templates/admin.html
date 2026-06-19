@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_admin.html" %}
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
@@ -9,10 +9,10 @@
                 <span class="material-icons-round">security</span>
             </div>
             <h2>Bob Identity Trust</h2>
-            <p>Login in to access your risk dashboard</p>
+            <p>Login in to access Admin dashboard</p>
         </div>
 
-        <form class="auth-form" id="loginForm" action="{{ url_for('auth.login') }}" method="POST">
+        <form class="auth-form" id="loginForm" action="{{ url_for('auth.a_login') }}" method="POST">
             <div class="form-group">
                 <label for="email">Email</label>
                 <div class="input-wrap">
@@ -31,13 +31,8 @@
 
             <button type="submit" class="btn btn-primary w-full mt-2">
                 <span class="material-icons-round" style="font-size:17px">login</span>
-                Log In
+                Login In
             </button>
-            <div class="text-center mt-3">
-                <a href="/signup" class="link">
-                    Dont have an account? Sign up
-                </a>
-            </div>
         </form>
 
     </div>

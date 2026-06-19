@@ -1,0 +1,150 @@
+{% extends "base_admin.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Admin Dashboard</h1>
+        <p>Welcome {{ session.get('username', 'User') }}</p>
+    </div>
+    <span class="badge">
+        <span class="badge-dot"></span>
+        Session Active
+    </span>
+</div>
+
+<div class="stat-grid mb-3">
+
+</div>
+
+<div class="card mb-3">
+    <h2>User Lookup</h2>
+    <p class="text-muted">Search by user ID or email</p>
+
+    <div class="lookup-bar">
+        <input
+            type="text"
+            id="lookupInput"
+            placeholder="e.g. 14 or jane@example.com"
+            onkeydown="if(event.key === 'Enter') runLookup();"
+        >
+        <button type="button" class="btn btn-primary" onclick="runLookup()">Search</button>
+    </div>
+
+    <div id="lookupError" class="error-text" style="display:none;"></div>
+
+    <div id="lookupResults" style="display:none;">
+        <div class="lookup-user-info">
+            <h3 id="lookupUserEmail"></h3>
+            <p id="lookupUserMeta"></p>
+        </div>
+
+        <div class="dash-grid">
+            <div>
+                <h4>Risk History</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Score</th>
+                            <th>Level</th>
+                            <th>Calculated At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="riskHistoryBody"></tbody>
+                </table>
+            </div>
+
+            <div>
+                <h4>Verification History</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="verificationHistoryBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="dash-grid">
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+    const ts = {{ session.get('login_time', 0) }};
+    if (ts) {
+        document.getElementById('loginTime').textContent = 
+            new Date(ts * 1000).toLocaleTimeString();
+    }
+
+    // Device info
+    const ua = navigator.userAgent;
+    const device = /mobile/i.test(ua) ? 'Mobile' : 'Desktop';
+    document.getElementById('deviceInfo').textContent = device;
+
+    async function runLookup() {
+        const query = document.getElementById('lookupInput').value.trim();
+        const errorBox = document.getElementById('lookupError');
+        const results = document.getElementById('lookupResults');
+
+        errorBox.style.display = 'none';
+        results.style.display = 'none';
+
+        if (!query) {
+            errorBox.textContent = 'Enter a user ID or email.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/admin/lookup?query=${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            if (!res.ok) {
+                errorBox.textContent = data.error || 'Lookup failed.';
+                errorBox.style.display = 'block';
+                return;
+            }
+
+            document.getElementById('lookupUserEmail').textContent = data.user.email;
+            document.getElementById('lookupUserMeta').textContent =
+                `ID: ${data.user.id} · Created: ${data.user.created_at ? new Date(data.user.created_at).toLocaleString() : '—'}`;
+
+            const riskBody = document.getElementById('riskHistoryBody');
+            riskBody.innerHTML = data.risk_history.length
+                ? data.risk_history.map(r => `
+                    <tr>
+                        <td>${r.risk_score}</td>
+                        <td>${r.risk_level}</td>
+                        <td>${new Date(r.calculated_at).toLocaleString()}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="3">No risk history.</td></tr>';
+
+            const verifyBody = document.getElementById('verificationHistoryBody');
+            verifyBody.innerHTML = data.verification_history.length
+                ? data.verification_history.map(v => `
+                    <tr>
+                        <td>${v.verification_method}</td>
+                        <td>${v.status}</td>
+                        <td>${new Date(v.timestamp).toLocaleString()}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="3">No verification history.</td></tr>';
+
+            results.style.display = 'block';
+        } catch (err) {
+            errorBox.textContent = 'Something went wrong.';
+            errorBox.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

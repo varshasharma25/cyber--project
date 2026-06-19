@@ -38,16 +38,14 @@ The system follows a risk-based authentication approach:
 
 This approach minimizes user friction while providing stronger protection against fraud and unauthorized access.
 
-## Features
-
 - AI-powered risk scoring
 - Behavioral anomaly detection
 - Device trust analysis
 - JWT-based authentication
-- OAuth 2.0 integration
 - Risk-based verification flow
 - REST API backend
 - Interactive dashboard
+- Admin dashboard with user lookup and history view
 
 ## Project Structure
 
@@ -56,34 +54,43 @@ BOB-IDENTITY-TRUST/
 │
 ├── backend/
 │   ├── ml/
-│   │   └── idk tbh
+│   │   └── risk_model.py
 │   │
 │   ├── models/
 │   │   ├── behavior_log.py
 │   │   ├── risk_score.py
-│   │   └── user.py
+│   │   ├── user.py
+│   │   └── verification_log.py
 │   │
 │   ├── routes/
 │   │   ├── auth.py
 │   │   ├── risk.py
 │   │   └── verify.py
 │   │
-│   ├── utils/
-│   │   ├── jwt_auth.py
-│   │   └── oauth.py
-│   │
-│   ├── app.py
-│   └── database/
-│       ├── sample_data.sql
-│       └── schema.sql
+│   ├── extensions.py
+│   ├── logger.py
+│   └── risk_utils.py
+│
+├── database/
+│   ├── sample_data.sql
+│   └── schema.sql
 │
 ├── frontend/
-│   ├── css/
-│   ├── js/
-│   ├── dashboard.html
-│   ├── index.html
-│   └── verify.html
+│   ├── static/
+│   │   ├── app.js
+│   │   └── style.css
+│   └── templates/
+│       ├── admin.html
+│       ├── admin_dashboard.html
+│       ├── base.html
+│       ├── base_admin.html
+│       ├── index.html
+│       ├── login.html
+│       ├── logs.html
+│       ├── signup.html
+│       └── verify.html
 │
+├── app.py
 ├── myenv/
 ├── .env
 ├── .env.example

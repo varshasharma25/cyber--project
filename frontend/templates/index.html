@@ -19,7 +19,7 @@
             <span class="material-icons-round">shield</span>
         </div>
         <div>
-            <div class="stat-card-val" id="riskScore">—</div>
+            <div class="stat-card-val" id="riskScore">{{ risk_score }}</div>
             <div class="stat-card-key">Risk Score</div>
         </div>
     </div>
@@ -28,7 +28,7 @@
             <span class="material-icons-round">verified</span>
         </div>
         <div>
-            <div class="stat-card-val" id="trustLevel">—</div>
+            <div class="stat-card-val" id="trustLevel">{{ trust_level }}</div>
             <div class="stat-card-key">Trust Level</div>
         </div>
     </div>
@@ -37,7 +37,7 @@
             <span class="material-icons-round">history</span>
         </div>
         <div>
-            <div class="stat-card-val" id="sessionCount">—</div>
+            <div class="stat-card-val" id="sessionCount">{{ session_count }}</div>
             <div class="stat-card-key">Sessions</div>
         </div>
     </div>
@@ -46,7 +46,7 @@
             <span class="material-icons-round">fingerprint</span>
         </div>
         <div>
-            <div class="stat-card-val" id="verifyStatus">—</div>
+            <div class="stat-card-val" id="verifyStatus">{{ verified }}</div>
             <div class="stat-card-key">Verified</div>
         </div>
     </div>
@@ -78,7 +78,7 @@
         <div class="meta-list">
             <div class="meta-row">
                 <span class="meta-key"><span class="material-icons-round">schedule</span> Login time</span>
-                <span class="meta-val" id="loginTime">—</span>
+                <span class="meta-val" id="loginTime">{{ login_time }}</span>
             </div>
             <div class="meta-row">
                 <span class="meta-key"><span class="material-icons-round">devices</span> Device</span>
@@ -86,41 +86,24 @@
             </div>
             <div class="meta-row">
                 <span class="meta-key"><span class="material-icons-round">location_on</span> IP</span>
-                <span class="meta-val" id="ipInfo">—</span>
+                <span class="meta-val" id="ipInfo">{{ ip }}</span>
             </div>
             <div class="meta-row">
                 <span class="meta-key"><span class="material-icons-round">policy</span> Risk Level</span>
                 <span class="meta-val">
-                    <span class="lvl lvl-INFO" id="riskLevelBadge">UNKNOWN</span>
+                    <span class="lvl lvl-INFO" id="riskLevelBadge">{{ risk_level }}</span>
                 </span>
             </div>
         </div>
     </div>
 
-    {% if is_admin %}
-
-    <div class="dash-card glass">
-
-        <div class="dash-card-head">
-            <span>Recent Activity</span>
-            <a href="/logs" class="dash-card-link">
-                View all
-                <span class="material-icons-round" style="font-size:13px">arrow_forward</span>
-            </a>
-        </div>
-        <div class="mini-log" id="activityFeed">
-            <div class="empty-inline">No activity yet</div>
-        </div>
-            
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 
-    const ts = {{ session.get('login_ts', 0) }};
+    const ts = {{ session.get('login_time', 0) }};
     if (ts) {
         document.getElementById('loginTime').textContent = 
             new Date(ts * 1000).toLocaleTimeString();

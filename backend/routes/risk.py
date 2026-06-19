@@ -4,25 +4,9 @@ from backend.models.behavior_log import BehaviorLog
 from backend.models.risk_score import RiskScore
 from backend.extensions import db
 from backend.logger import log
+from backend.risk_utils import score_to_level, level_to_verification
 
 risk_bp = Blueprint("risk", __name__)
-
-THRESHOLD_LOW    = 30   # [x < 30 seamless access ], [30 < x < 60 SMS verification ], [ 60 < x : Biometric + 2FA ]
-THRESHOLD_MEDIUM = 60 
-
-def _score_to_level(score: int) -> str:
-    if score < THRESHOLD_LOW:
-        return "low"
-    elif score <= THRESHOLD_MEDIUM:
-        return "medium"
-    return "high"
-
-def _level_to_verification(level: str) -> list[str]:
-    return {
-        "low":    [],
-        "medium": ["sms"],
-        "high":   ["biometric", "2fa"],
-    }.get(level, [])
 
 
 @risk_bp.route("/calculate", methods=["POST"])
@@ -45,8 +29,8 @@ def calculate():
 
     from backend.ml.risk_model import calculate_risk
     score = calculate_risk(user_id, behavior)
-    level = _score_to_level(score)
-    required_verification = _level_to_verification(level)
+    level = score_to_level(score)
+    required_verification = level_to_verification(level)
 
     risk_entry = RiskScore(
         user_id    = user_id,

@@ -43,7 +43,12 @@ if (loginForm) {
             }
 
             setToken(data.token);
-            window.location.href = '/home';
+
+            if (data.is_admin) {
+                window.location.href = '/admin_dashboard';
+            } else {
+                window.location.href = '/home';
+            }
 
         } catch (err) {
             showLoginError('Could not reach the server. Try again.');
