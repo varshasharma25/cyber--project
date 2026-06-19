@@ -37,9 +37,28 @@
         <div class="lookup-user-info">
             <h3 id="lookupUserEmail"></h3>
             <p id="lookupUserMeta"></p>
-        </div>
+        </div> <br>
 
-        <div class="dash-grid">
+        <div class="lookup-user-info">
+            <div>
+                <h4>Transaction History</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Direction</th>
+                            <th>Counterparty</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Risk @ Time</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionHistoryBody"></tbody>
+                </table>
+            </div>
+        </div> <br>
+
+        <div class="lookup-user-info">
             <div>
                 <h4>Risk History</h4>
                 <table class="data-table">
@@ -53,7 +72,9 @@
                     <tbody id="riskHistoryBody"></tbody>
                 </table>
             </div>
+        </div> <br>
 
+        <div class="lookup-user-info">
             <div>
                 <h4>Verification History</h4>
                 <table class="data-table">
@@ -67,7 +88,8 @@
                     <tbody id="verificationHistoryBody"></tbody>
                 </table>
             </div>
-        </div>
+        </div> <br>
+
     </div>
 </div>
 
@@ -139,6 +161,28 @@
                     </tr>
                 `).join('')
                 : '<tr><td colspan="3">No verification history.</td></tr>';
+
+            const txnBody = document.getElementById('transactionHistoryBody');
+            txnBody.innerHTML = data.transaction_history.length
+                ? data.transaction_history.map(t => {
+                    const isSender = t.sender_id === data.user.id;
+                    const direction = isSender ? 'Sent' : 'Received';
+                    const counterparty = isSender ? t.recipient_id : t.sender_id;
+                    const statusClass = t.status === 'success' ? 'text-success'
+                                    : t.status === 'blocked' ? 'text-danger'
+                                    : 'text-warning';
+                    return `
+                        <tr>
+                            <td>${direction}</td>
+                            <td>User #${counterparty}</td>
+                            <td>${t.amount.toFixed(2)}</td>
+                            <td class="${statusClass}">${t.status}</td>
+                            <td>${t.risk_level_at_time ? t.risk_level_at_time.toUpperCase() + ' (' + t.risk_score_at_time + ')' : '—'}</td>
+                            <td>${new Date(t.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `;
+                }).join('')
+                : '<tr><td colspan="7">No transaction history.</td></tr>';
 
             results.style.display = 'block';
         } catch (err) {

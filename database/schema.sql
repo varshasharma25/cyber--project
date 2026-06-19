@@ -1,3 +1,13 @@
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS behavior_logs;
+DROP TABLE IF EXISTS risk_scores;
+DROP TABLE IF EXISTS verification_logs;
+DROP TABLE IF EXISTS device_fingerprints;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
 CREATE TABLE IF NOT EXISTS users (
     id            INT PRIMARY KEY AUTO_INCREMENT,
     email         VARCHAR(255) NOT NULL UNIQUE,
@@ -41,3 +51,14 @@ CREATE TABLE IF NOT EXISTS verification_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX idx_verification_logs_timestamp ON verification_logs (timestamp);
+
+CREATE TABLE IF NOT EXISTS device_fingerprints (
+    id            INT PRIMARY KEY AUTO_INCREMENT,
+    user_id       INT NOT NULL,
+    fingerprint   VARCHAR(64) NOT NULL COMMENT 'sha256 hash of client device signals',
+    first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX idx_device_fingerprints_user_id ON device_fingerprints (user_id);

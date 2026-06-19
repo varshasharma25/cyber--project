@@ -8,13 +8,31 @@ from backend.risk_utils import score_to_level, level_to_verification
 
 risk_bp = Blueprint("risk", __name__)
 
-
 @risk_bp.route("/calculate", methods=["POST"])
 @jwt_required()
 def calculate():
     user_id  = int(get_jwt_identity())
     data     = request.get_json(silent=True) or {}
     behavior = data.get("behavior", {})
+
+    from backend.models.device_fingerprint import DeviceFingerprint
+    from datetime import datetime
+
+    fingerprint = behavior.get("device_fingerprint")
+    if fingerprint:
+        existing = (
+            DeviceFingerprint.query
+            .filter_by(user_id=user_id, fingerprint=fingerprint)
+            .first()
+        )
+        if existing:
+            existing.last_seen_at = datetime.utcnow()
+            behavior["new_device"] = False
+        else:
+            db.session.add(DeviceFingerprint(user_id=user_id, fingerprint=fingerprint))
+            behavior["new_device"] = True
+        db.session.flush()
+
 
     if not behavior:
         return jsonify({"error": "No behavior data provided."}), 400

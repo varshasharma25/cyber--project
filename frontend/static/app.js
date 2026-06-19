@@ -12,6 +12,44 @@ function clearToken() {
     localStorage.removeItem(TOKEN_KEY);
 }
 
+async function getDeviceFingerprint() {
+    const signals = [
+        navigator.userAgent,
+        navigator.platform,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        screen.colorDepth,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency || 'unknown',
+    ].join('|');
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(signals);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sendLoginBehavior(token) {
+    const fingerprint = await getDeviceFingerprint();
+
+    fetch('/risk/calculate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            behavior: {
+                login_hour: new Date().getHours(),
+                device_fingerprint: fingerprint,
+            }
+        }),
+    }).catch(() => {
+        // non-blocking — login should proceed even if this fails
+    });
+}
+
 const loginForm = document.getElementById('loginForm');
 
 if (loginForm) {
@@ -43,6 +81,7 @@ if (loginForm) {
             }
 
             setToken(data.token);
+            await sendLoginBehavior(data.token);
 
             if (data.is_admin) {
                 window.location.href = '/admin_dashboard';

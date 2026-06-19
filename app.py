@@ -6,6 +6,7 @@ from backend.logger import read_logs
 from backend.models.risk_score import RiskScore
 from backend.models.verification_log import VerificationLog
 from backend.models.user import User
+from backend.models.transaction import Transaction
 
 import os, sys, logging
 
@@ -67,13 +68,15 @@ def require_admin(f):
         return f(*args, **kwargs)
     return decorated
 
-from backend.routes.auth   import auth_bp
-from backend.routes.risk   import risk_bp
-from backend.routes.verify import verify_bp
+from backend.routes.auth        import auth_bp
+from backend.routes.risk        import risk_bp
+from backend.routes.verify      import verify_bp
+from backend.routes.transaction import transaction_bp
 
-app.register_blueprint(auth_bp,   url_prefix="/auth")
-app.register_blueprint(risk_bp,   url_prefix="/risk")
-app.register_blueprint(verify_bp, url_prefix="/verify")
+app.register_blueprint(auth_bp,        url_prefix="/auth")
+app.register_blueprint(risk_bp,        url_prefix="/risk")
+app.register_blueprint(verify_bp,      url_prefix="/verify")
+app.register_blueprint(transaction_bp, url_prefix="/transaction")
 
 
 @app.route("/")
@@ -114,16 +117,31 @@ def dashboard():
         .order_by(VerificationLog.timestamp.desc())
         .first()
     )
+
     if not latest_verification:
         verified = "-"
     else:
-        newer_high_risk = (
+        risk_at_verification = (
             RiskScore.query
-            .filter_by(user_id=session["user_id"], risk_level="high")
-            .filter(RiskScore.calculated_at > latest_verification.timestamp)
+            .filter_by(user_id=session["user_id"])
+            .filter(RiskScore.calculated_at <= latest_verification.timestamp)
+            .order_by(RiskScore.calculated_at.desc())
             .first()
         )
-        verified = "PENDING" if newer_high_risk else "YES"
+        newer_risk = (
+            RiskScore.query
+            .filter_by(user_id=session["user_id"])
+            .filter(RiskScore.calculated_at > latest_verification.timestamp)
+            .order_by(RiskScore.calculated_at.asc())
+            .first()
+        )
+
+        baseline_score = risk_at_verification.risk_score if risk_at_verification else 60  # DEFAULT_FALLBACK_SCORE
+
+        if newer_risk and newer_risk.risk_score > baseline_score:
+            verified = "PENDING"
+        else:
+            verified = "YES"
 
     session_count = (
         RiskScore.query
@@ -142,7 +160,6 @@ def dashboard():
         ip=flask_request.remote_addr,
         risk_level=risk_level
     )
-
 
 @app.route("/verify")
 @require_login
@@ -190,6 +207,17 @@ def admin_lookup():
         .all()
     )
 
+    transaction_entries = (
+        Transaction.query
+        .filter(
+            (Transaction.sender_id == user.id) |
+            (Transaction.recipient_id == user.id)
+        )
+        .order_by(Transaction.timestamp.desc())
+        .limit(20)
+        .all()
+    )
+
     return jsonify({
         "user": {
             "id":         user.id,
@@ -198,6 +226,7 @@ def admin_lookup():
         },
         "risk_history":         [r.to_dict() for r in risk_entries],
         "verification_history": [v.to_dict() for v in verification_entries],
+        "transaction_history":  [t.to_dict() for t in transaction_entries],
     }), 200
 
 @app.route("/admin_dashboard")
@@ -222,19 +251,18 @@ def logs_page():
 
 @app.route("/logout")
 def logout():
-
     user_id = session.get("user_id")
-    is_admin = session.get("is_admin", False)
+    referrer = flask_request.referrer or ""
 
-    if is_admin:
+    came_from_admin = "/admin" in referrer
+
+    if came_from_admin:
         log("info", f"Admin with id: '{user_id}' logged out successfully")
     else:
         log("info", f"User with id: '{user_id}' logged out successfully")
 
     session.clear()
-
-    return redirect("/admin_login" if is_admin else "/")
-
+    return redirect("/admin_login" if came_from_admin else "/")
 
 if __name__ == "__main__":
     import flask.cli

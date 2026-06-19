@@ -29,10 +29,15 @@ def login():
         log("error", f"Failed login for {email!r}")
         return jsonify({"error": "Invalid credentials."}), 401
 
+    ADMIN_IDS = set(int(i) for i in json.loads(os.getenv("ADMIN_IDS")))
+    is_admin  = int(user.id) in ADMIN_IDS
+
     token = create_access_token(identity=str(user.id))
 
     session["user_id"]  = user.id
     session["username"] = user.email.split("@")[0]
+    if is_admin:
+        session["is_admin"] = True
 
     log("info", f"User with id: '{user.id}' logged in successfully")
 

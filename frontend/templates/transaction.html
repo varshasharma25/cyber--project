@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Transactions</h1>
+        <p>Transfer funds and review your recent activity</p>
+    </div>
+    <span class="badge">
+        <span class="badge-dot"></span>
+        Session Active
+    </span>
+</div>
+
+<div class="stat-grid mb-3">
+    <div class="stat-card glass">
+        <div class="stat-card-icon green">
+            <span class="material-icons-round">account_balance_wallet</span>
+        </div>
+        <div>
+            <div class="stat-card-val" id="balanceVal">{{ "%.2f"|format(balance) }}</div>
+            <div class="stat-card-key">Balance</div>
+        </div>
+    </div>
+    <div class="stat-card glass">
+        <div class="stat-card-icon amber">
+            <span class="material-icons-round">shield</span>
+        </div>
+        <div>
+            <div class="stat-card-val">{{ risk_score }}</div>
+            <div class="stat-card-key">Risk Score</div>
+        </div>
+    </div>
+    <div class="stat-card glass">
+        <div class="stat-card-icon blue">
+            <span class="material-icons-round">policy</span>
+        </div>
+        <div>
+            <div class="stat-card-val">{{ risk_level }}</div>
+            <div class="stat-card-key">Risk Level</div>
+        </div>
+    </div>
+</div>
+
+<div class="dash-grid">
+
+    <div class="dash-card glass">
+        <div class="dash-card-head">
+            <span>Send Money</span>
+        </div>
+
+        <div id="transferAlert"></div>
+
+        <form id="transferForm" onsubmit="return false;">
+            <div class="meta-list">
+                <div class="meta-row">
+                    <span class="meta-key"><span class="material-icons-round">person</span> Recipient</span>
+                    <span class="meta-val">
+                        <input type="text" id="recipientInput" placeholder="Email or user ID" autocomplete="off">
+                    </span>
+                </div>
+                <div class="meta-row">
+                    <span class="meta-key"><span class="material-icons-round">payments</span> Amount</span>
+                    <span class="meta-val">
+                        <input type="number" id="amountInput" placeholder="0.00" step="0.01" min="0.01" autocomplete="off">
+                    </span>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="transferBtn" onclick="submitTransfer()" style="margin-top:14px">
+                <span class="material-icons-round" style="font-size:17px">send</span>
+                Transfer
+            </button>
+        </form>
+    </div>
+
+    <div class="dash-card glass">
+        <div class="dash-card-head">
+            <span>Recent Activity</span>
+        </div>
+        <div class="meta-list" id="historyList">
+            {% if history|length == 0 %}
+            <div class="meta-row">
+                <span class="meta-key">No transactions yet</span>
+            </div>
+            {% endif %}
+            {% for tx in history %}
+            <div class="meta-row">
+                <span class="meta-key">
+                    <span class="material-icons-round">
+                        {% if tx.status == 'success' %}check_circle{% elif tx.status == 'blocked' %}block{% else %}error{% endif %}
+                    </span>
+                    {% if tx.sender_id == user_id %}To #{{ tx.recipient_id }}{% else %}From #{{ tx.sender_id }}{% endif %}
+                </span>
+                <span class="meta-val">
+                    {{ "%.2f"|format(tx.amount) }}
+                    <span class="lvl lvl-INFO">{{ tx.status|upper }}</span>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function submitTransfer() {
+    const recipient = document.getElementById('recipientInput').value.trim();
+    const amount = document.getElementById('amountInput').value;
+    const alertBox = document.getElementById('transferAlert');
+    const btn = document.getElementById('transferBtn');
+
+    alertBox.innerHTML = '';
+
+    if (!recipient || !amount) {
+        alertBox.innerHTML = '<div class="alert alert-error">Recipient and amount are required.</div>';
+        return;
+    }
+
+    btn.disabled = true;
+
+    try {
+        const res = await fetch("{{ url_for('transaction_bp.transfer') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipient, amount: parseFloat(amount) })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            alertBox.innerHTML = `<div class="alert alert-error">${data.error || 'Transfer failed.'}</div>`;
+        } else {
+            alertBox.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+            document.getElementById('balanceVal').textContent = data.new_balance.toFixed(2);
+            document.getElementById('recipientInput').value = '';
+            document.getElementById('amountInput').value = '';
+            setTimeout(() => location.reload(), 900);
+        }
+    } catch (err) {
+        alertBox.innerHTML = '<div class="alert alert-error">Something went wrong. Please try again.</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+</script>
+{% endblock %}

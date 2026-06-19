@@ -8,13 +8,7 @@ from backend.risk_utils import score_to_level
 
 verify_bp = Blueprint("verify_bp", __name__)
 
-VERIFICATION_REDUCTION = {
-    "sms":       20,
-    "2fa":       25,
-    "biometric": 25,
-}
-
-DEFAULT_FALLBACK_SCORE = 60  # used only if user somehow has no RiskScore row yet
+DEFAULT_FALLBACK_SCORE = 60
 
 
 def _log_attempt(user_id: int, method: str, status: str):
@@ -26,9 +20,32 @@ def _log_attempt(user_id: int, method: str, status: str):
     db.session.add(entry)
     db.session.commit()
 
+VERIFICATION_REDUCTION = {
+    "sms":       20,
+    "2fa":       25,
+    "biometric": 25,
+}
+
+VERIFICATION_FLOOR = {
+    "sms":       30,  # SMS can never bring score below "medium" threshold
+    "2fa":       10,
+    "biometric": 10,
+}
+
+VERIFICATION_PENALTY = {
+    "sms":       15,
+    "2fa":       20,
+    "biometric": 30,  # failed biometric is the strongest signal of fraud
+}
+
+VERIFICATION_CEILING = {
+    "sms":       100,
+    "2fa":       100,
+    "biometric": 100,
+}
+
 
 def _apply_verification_success(user_id: int, method: str):
-    """Reduce risk score after a successful verification and store a new RiskScore row."""
     latest = (
         RiskScore.query
         .filter_by(user_id=user_id)
@@ -38,8 +55,36 @@ def _apply_verification_success(user_id: int, method: str):
 
     current_score = latest.risk_score if latest else DEFAULT_FALLBACK_SCORE
     reduction      = VERIFICATION_REDUCTION.get(method, 0)
-    new_score      = max(0, current_score - reduction)
-    new_level      = score_to_level(new_score)
+    floor          = VERIFICATION_FLOOR.get(method, 0)
+
+    new_score = max(floor, current_score - reduction)
+    new_level = score_to_level(new_score)
+
+    entry = RiskScore(
+        user_id    = user_id,
+        risk_score = new_score,
+        risk_level = new_level,
+    )
+    db.session.add(entry)
+    db.session.commit()
+
+    return new_score, new_level
+
+
+def _apply_verification_failure(user_id: int, method: str):
+    latest = (
+        RiskScore.query
+        .filter_by(user_id=user_id)
+        .order_by(RiskScore.calculated_at.desc())
+        .first()
+    )
+
+    current_score = latest.risk_score if latest else DEFAULT_FALLBACK_SCORE
+    penalty        = VERIFICATION_PENALTY.get(method, 0)
+    ceiling        = VERIFICATION_CEILING.get(method, 100)
+
+    new_score = min(ceiling, current_score + penalty)
+    new_level = score_to_level(new_score)
 
     entry = RiskScore(
         user_id    = user_id,
@@ -72,8 +117,13 @@ def verify_sms():
     # it will accept "123456" for now
     if code != "123456":
         _log_attempt(user_id, "sms", "failed")
-        log("error", f"SMS verification failed for user id: '{user_id}'")
-        return jsonify({"error": "Invalid code."}), 401
+        new_score, new_level = _apply_verification_failure(user_id, "sms")
+        log("error", f"SMS verification failed for user id: '{user_id}', new score: '{new_score}', new level: '{new_level}'")
+        return jsonify({
+            "error":      "Invalid code.",
+            "risk_score": new_score,
+            "risk_level": new_level,
+        }), 401
 
     _log_attempt(user_id, "sms", "success")
     new_score, new_level = _apply_verification_success(user_id, "sms")
@@ -99,8 +149,13 @@ def verify_2fa():
     # it will accept "000000" for now
     if code != "000000":
         _log_attempt(user_id, "2fa", "failed")
-        log("error", f"2FA verification failed for user: '{user_id}'")
-        return jsonify({"error": "Invalid authenticator code."}), 401
+        new_score, new_level = _apply_verification_failure(user_id, "2fa")
+        log("error", f"2FA verification failed for user: '{user_id}', new score: '{new_score}', new level: '{new_level}'")
+        return jsonify({
+            "error":      "Invalid authenticator code.",
+            "risk_score": new_score,
+            "risk_level": new_level,
+        }), 401
 
     _log_attempt(user_id, "2fa", "success")
     new_score, new_level = _apply_verification_success(user_id, "2fa")
@@ -122,8 +177,13 @@ def verify_biometric():
 
     if not data:
         _log_attempt(user_id, "biometric", "failed")
-        log("error", f"Biometric verification failed for user: '{user_id}'")
-        return jsonify({"error": "No biometric data received."}), 400
+        new_score, new_level = _apply_verification_failure(user_id, "biometric")
+        log("error", f"Biometric verification failed for user: '{user_id}', new score: '{new_score}', new level: '{new_level}'")
+        return jsonify({
+            "error":      "No biometric data received.",
+            "risk_score": new_score,
+            "risk_level": new_level,
+        }), 400
 
     _log_attempt(user_id, "biometric", "success")
     new_score, new_level = _apply_verification_success(user_id, "biometric")

@@ -54,6 +54,10 @@
             <span class="material-icons-round">verified_user</span>
             Verify
         </a>
+        <a href="{{ url_for('transaction_bp.transaction_page') }}" class="nav-item {% if request.endpoint == 'transaction_bp.transaction_page' %}active{% endif %}">
+            <span class="material-icons-round">swap_horiz</span>
+            Transactions
+        </a>
 
     </nav>
 
