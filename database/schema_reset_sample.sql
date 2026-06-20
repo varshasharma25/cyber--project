@@ -9,11 +9,12 @@ SET FOREIGN_KEY_CHECKS = 0;
 --   eve@boi-trust.com     > [pass] Test1234!   (high-risk profile)
 --   admin@boi-trust.com   > [pass] Admin1234!  (high-risk profile)
 
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS behavior_logs;
-DROP TABLE IF EXISTS risk_scores;
-DROP TABLE IF EXISTS verification_logs;
+DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS device_fingerprints;
+DROP TABLE IF EXISTS verification_logs;
+DROP TABLE IF EXISTS risk_scores;
+DROP TABLE IF EXISTS behavior_logs;
+DROP TABLE IF EXISTS users;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -27,7 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS behavior_logs (
     id         INT PRIMARY KEY AUTO_INCREMENT,
     user_id    INT NOT NULL,
-    event_type VARCHAR(50) NOT NULL COMMENT "'typing' | 'click' | 'navigation' | 'transaction' etc.",
+    event_type VARCHAR(50) NOT NULL COMMENT 'typing | click | navigation | transaction etc.',
     event_data JSON NOT NULL COMMENT 'raw behavioral payload from the frontend (speed, coords, timing...)',
     timestamp  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -39,7 +40,7 @@ CREATE TABLE IF NOT EXISTS risk_scores (
     id            INT PRIMARY KEY AUTO_INCREMENT,
     user_id       INT NOT NULL,
     risk_score    INT NOT NULL COMMENT '0-100',
-    risk_level    VARCHAR(20) NOT NULL COMMENT "'low' | 'medium' | 'high'",
+    risk_level    VARCHAR(20) NOT NULL COMMENT 'low | medium | high',
     calculated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT chk_risk_score_range CHECK (risk_score BETWEEN 0 AND 100),
@@ -51,8 +52,8 @@ CREATE INDEX idx_risk_scores_calculated_at ON risk_scores (calculated_at);
 CREATE TABLE IF NOT EXISTS verification_logs (
     id                   INT PRIMARY KEY AUTO_INCREMENT,
     user_id              INT NOT NULL,
-    verification_method  VARCHAR(50) NOT NULL COMMENT "'sms' | '2fa' | 'biometric'",
-    status               VARCHAR(20) NOT NULL COMMENT "'success' | 'failed'",
+    verification_method  VARCHAR(50) NOT NULL COMMENT 'sms | 2fa | biometric',
+    status               VARCHAR(20) NOT NULL COMMENT 'success | failed',
     timestamp            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT chk_verification_method_valid CHECK (verification_method IN ('sms', '2fa', 'biometric')),
@@ -97,7 +98,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     sender_id           INT NOT NULL,
     recipient_id        INT NOT NULL,
     amount              DECIMAL(12,2) NOT NULL,
-    status              VARCHAR(20) NOT NULL COMMENT "'success' | 'failed' | 'blocked'",
+    status              VARCHAR(20) NOT NULL COMMENT 'success | failed | blocked',
     reason              VARCHAR(255) NULL,
     risk_score_at_time  INT NULL,
     risk_level_at_time  VARCHAR(20) NULL,
