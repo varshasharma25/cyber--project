@@ -32,7 +32,8 @@ app.logger.setLevel(logging.ERROR)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
     f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
-    f"@{os.getenv('DB_HOST')}/{os.getenv('DB_NAME')}"
+    f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME')}"
+    f"?ssl_verify_cert=true"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
